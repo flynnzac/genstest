@@ -1,5 +1,6 @@
-*! genstest v1.0.5 11mar2013
+*! genstest v1.0.6 28feb2020
 *! authors Zachary Flynn
+*! 1.0.6: updated to work with GMM in Stata 16
 
 cap program drop genstest
 program genstest, rclass
@@ -23,8 +24,8 @@ program genstest, rclass
       tokenize "`test'"
       local i 1
       while (`i'<=wordcount("`test'")) {
-        while ( regexm("`sexp'","{``i''[=]*[0-9\.]*}") ) {
-          local sexp = regexr("`sexp'","{``i''[=]*[0-9\.]*}","<``i''>")
+        while ( regexm("`sexp'","{``i''[:_cons]*[=]*[0-9\.]*}") ) {
+          local sexp = regexr("`sexp'","{``i''[:_cons]*[=]*[0-9\.]*}","<``i''>")
         }
         local i = `i' + 1
       }
@@ -36,7 +37,10 @@ program genstest, rclass
     else {
       local sexp = "`e(sexp_1)'"
       local nnull = wordcount("`null'")
+    }
 
+    while (regexm("`sexp'", ":_cons")) {
+      local sexp = regexr("`sexp'", ":_cons", "")
     }
     local first = "e(cmdline)"
     local comma = ""
@@ -1193,7 +1197,6 @@ program ParseEquation, rclass
     local est_names = "`est_names' `est_name`i''"
     local i = `i' + 1
   }
-
   return local nest = `i' - 1
   return local est_names = "`est_names'"
   return local names = "`names'"
@@ -1475,7 +1478,11 @@ mata:
   real matrix pvalue (real matrix value, real scalar tau,
     real scalar kx, real scalar kz, real scalar sb) {
 
-    fh = fopen (st_strscalar ("c(sysdir_plus)") + "crit_values.matrix", "r")
+    fh = _fopen (st_strscalar ("c(sysdir_plus)") + "crit_values.matrix", "r")
+    if (fh < 0) {
+      fh = fopen("crit_values.matrix", "r")
+    }
+    
     rn = kz*(kz+1)*0.5 + kz - kx + 1
     stat_cur = sb ? 4 : 1
     pval = J(1,1,.)
@@ -1527,7 +1534,10 @@ mata:
     clm = 1000-a*1000+1
     rn = kz*(kz+1)*0.5 + kz - kx + 1
 
-    fh = fopen (st_strscalar ("c(sysdir_plus)") + "crit_values.matrix", "r")
+    fh = _fopen (st_strscalar ("c(sysdir_plus)") + "crit_values.matrix", "r")
+    if (fh < 0) {
+      fh = fopen ("crit_values.matrix", "r")
+    }
     stat_cur = 1
     crit = J(1,1,.)
 
